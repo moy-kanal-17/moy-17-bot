@@ -16,6 +16,9 @@ router = Router()
 async def start_command(message: types.Message):
     await message.answer("🎬 Привет! Это бот для отбора в фильм. Просто отправьте своё фото!")
 
+@router.message(command("finish"))
+    await message.answer("ТЫ ЕБЛАН УЖЕ УХОДИШ!")
+
 # Oddiy matn xabarlarini qabul qilish
 @router.message(lambda message: message.text is not None)
 async def handle_text(message: types.Message):
