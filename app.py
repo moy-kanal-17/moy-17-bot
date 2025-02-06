@@ -17,6 +17,7 @@ async def start_command(message: types.Message):
     await message.answer("🎬 Привет! Это бот для отбора в фильм. Просто отправьте своё фото!")
 
 @router.message(command("finish"))
+async def handle_text(message: types.Message):
     await message.answer("ТЫ ЕБЛАН УЖЕ УХОДИШ!")
 
 # Oddiy matn xabarlarini qabul qilish
