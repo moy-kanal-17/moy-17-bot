@@ -41,7 +41,7 @@ async def weather_command(message: types.Message):
     if data and "main" in data:
         temp = data["main"]["temp"]
         desc = data["weather"][0]["description"].capitalize()
-        await message.answer(f"🌤 Погода в городе {city}:\n🌡 Температура: {temp}°C\n☁️ {desc}")
+        await message.answer(f"🌤 Погода в городе {city}:\n🌡 Температура: {temp - 1}°C\n☁️ {desc}")
     else:
         await message.answer("❌ Город не найден или произошла ошибка. Попробуйте еще раз!")
         await bot.send_message(ADMIN_ID, f"⚠️ Ошибка с погодой!\nГород: {city}\nПользователь: {message.from_user.full_name} ({message.from_user.id})")
