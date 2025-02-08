@@ -2,26 +2,68 @@ import aiogram
 from aiogram import Bot, Dispatcher, Router, types
 from aiogram.filters import Command
 import asyncio
+import aiohttp
 
-# Token va Admin ID
 TOKEN = '7838778700:AAE7HIfFvQUmx3ngdAvr6r-RrftM-D1OAC4'
-ADMIN_ID = 5655572400  # O'zingizning Telegram ID ni shu yerga qo‘ying
+ADMIN_ID = 5655572400
+API_KEY = "0fd92f48fd3fbe6479333eeffdc1543c"
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 router = Router()
 
-# /start komandasi
+async def get_weather(city):
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric&lang=ru"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status == 200:
+                return await response.json()
+            else:
+                return None
+
 @router.message(Command("start"))
 async def start_command(message: types.Message):
-    await message.answer("🎬 Привет! Это бот для отбора в фильм. Просто отправьте своё фото!")
+    await message.answer("🎬 Привет! Это бот для отбора в фильм. Просто отправьте своё фото!\n"
+                         "☁️ Также я могу показывать погоду! Используйте команду:\n"
+                         "`/weather [город]` или просто напишите `погода [город]`.", 
+                         parse_mode="Markdown")
 
-# /finish komandasi
-@router.message(Command("finish"))
-async def finish_command(message: types.Message):
-    await message.answer("ТЫ ЕБЛАН УЖЕ УХОДИШ!")
+@router.message(Command("weather"))
+async def weather_command(message: types.Message):
+    args = message.text.split(maxsplit=1)
+    if len(args) < 2:
+        await message.answer("⚠️ Пожалуйста, укажите город. Например: `/weather Tashkent`", parse_mode="Markdown")
+        return
 
-# Oddiy matn xabarlarini qabul qilish
+    city = args[1]
+    data = await get_weather(city)
+    
+    if data and "main" in data:
+        temp = data["main"]["temp"]
+        desc = data["weather"][0]["description"].capitalize()
+        await message.answer(f"🌤 Погода в городе {city}:\n🌡 Температура: {temp}°C\n☁️ {desc}")
+    else:
+        await message.answer("❌ Город не найден или произошла ошибка. Попробуйте еще раз!")
+        await bot.send_message(ADMIN_ID, f"⚠️ Ошибка с погодой!\nГород: {city}\nПользователь: {message.from_user.full_name} ({message.from_user.id})")
+
+@router.message(lambda message: message.text.lower().startswith("погода"))
+async def weather_text(message: types.Message):
+    args = message.text.split(maxsplit=1)
+    if len(args) < 2:
+        await message.answer("⚠️ Укажите город после слова `погода`. Например: `погода Ташкент`")
+        return
+
+    city = args[1]
+    data = await get_weather(city)
+    
+    if data and "main" in data:
+        temp = data["main"]["temp"]
+        desc = data["weather"][0]["description"].capitalize()
+        await message.answer(f"🌤 Погода в городе {city}:\n🌡 Температура: {temp}°C\n☁️ {desc}")
+    else:
+        await message.answer("❌ Город не найден или произошла ошибка. Попробуйте еще раз!")
+        await bot.send_message(ADMIN_ID, f"⚠️ Ошибка с погодой!\nГород: {city}\nПользователь: {message.from_user.full_name} ({message.from_user.id})")
+
 @router.message(lambda message: message.text is not None)
 async def handle_text(message: types.Message):
     user_info = f"📩 Новое сообщение!\n👤 Имя: {message.from_user.full_name}\n🆔 ID: {message.from_user.id}"
@@ -31,10 +73,9 @@ async def handle_text(message: types.Message):
 
     await bot.send_message(ADMIN_ID, user_info)
 
-# Rasmni qabul qilish va adminga jo‘natish
 @router.message(lambda message: message.photo is not None)
 async def handle_photo(message: types.Message):
-    photo = message.photo[-1].file_id  # Eng katta sifatdagi rasmni olish
+    photo = message.photo[-1].file_id
     caption = f"🖼 Новое фото!\n👤 Имя: {message.from_user.full_name}\n🆔 ID: {message.from_user.id}"
     if message.from_user.username:
         caption += f"\n🔗 Username: @{message.from_user.username}"
@@ -43,7 +84,6 @@ async def handle_photo(message: types.Message):
 
     await bot.send_photo(ADMIN_ID, photo, caption=caption)
 
-# Fayl jo‘natish (videolar va boshqa fayllar)
 @router.message(lambda message: message.document is not None or message.video is not None)
 async def handle_files(message: types.Message):
     caption = f"📂 Новый файл!\n👤 Имя: {message.from_user.full_name}\n🆔 ID: {message.from_user.id}"
@@ -57,10 +97,8 @@ async def handle_files(message: types.Message):
     elif message.video:
         await bot.send_video(ADMIN_ID, message.video.file_id, caption=caption)
 
-# Routerni qo‘shish
 dp.include_router(router)
 
-# Botni ishga tushirish
 async def on_start():
     print("✅ Bot ishga tushdi! 🎬")
     await dp.start_polling(bot)
